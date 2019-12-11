@@ -1,5 +1,5 @@
 import React, {Component} from 'react'
-import Ip from './Ip.json'
+import Services from './core/Api'
 import {
     View,
     Text,
@@ -34,7 +34,7 @@ const category = [
 
 const styles = StyleSheet.create({
     main: {
-        paddingHorizontal: 10,
+        paddingHorizontal: 5,
         paddingVertical: 5,
         backgroundColor: 'black',
         flex: 1,
@@ -55,20 +55,22 @@ const styles = StyleSheet.create({
 export default class News extends Component {
     constructor() {
         super()
-        console.log(Ip.ip)
         this.state = {
-            page: 0,
+            page: 1,
+            pageSize: 10,
             newsArray: [],
             isLoading: true,
+            total: 0,
             category: 'entertainment'
         }
         this.fetchNews()
     }
 
     handleChange = text => {
-        console.log(text)
         this.setState(
             {
+                page: 0,
+                newsArray: [],
                 category: text
             },
             this.fetchNews
@@ -76,32 +78,30 @@ export default class News extends Component {
     }
 
     fetchNews = () => {
-        console.log('dhgdhghg')
-        this.setState({
-            isLoading: true
-        })
-        fetch(Ip.ip + '/user/get_news', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                page: this.state.page,
-                category: this.state.category
-            })
-        })
+        let {newsArray} = this.state
+        const {category, page, pageSize} = this.state
+        Services.get(category, page, pageSize)
             .then(async Response => {
                 let data = await Response.json()
                 console.log(data)
+                newsArray.push(...data.articles)
                 this.setState({
-                    newsArray: data.articles,
+                    newsArray,
+                    total: data.totalResults,
                     isLoading: false
                 })
             })
             .catch(error => console.log(error))
     }
 
-    componentDidMount() {}
+    handleMore = () => {
+        let {page, total} = this.state
+        page += 1
+        if (page <= total / 10) {
+            console.log(page)
+            this.setState({page}, this.fetchNews)
+        }
+    }
 
     render() {
         return (
@@ -111,56 +111,59 @@ export default class News extends Component {
                     styles.main,
                     Platform.OS === 'ios' ? {paddingTop: 44} : null
                 ]}>
-                {this.state.isLoading ? (
-                    <ActivityIndicator size="large" color="#0000ff" />
-                ) : (
-                    <View style={{flex: 1}}>
-                        <View>
-                            <Text
-                                style={{
-                                    height: 30,
-                                    fontSize: 20,
-                                    textAlign: 'center',
-                                    color: 'white'
-                                }}>
-                                Category
-                            </Text>
-                            <Dropdown
-                                onChangeText={this.handleChange}
-                                baseColor={'transparent'}
-                                textColor={'white'}
-                                itemColor={'white'}
-                                animationDuration={420}
-                                itemTextStyle={{
-                                    textAlign: 'center'
-                                }}
-                                selectedItemColor={'blue'}
-                                itemCount={category.length}
-                                itemPadding={10}
-                                dropdownOffset={{top: 1, left: 10}}
-                                dropdownMargins={{min: 8, max: 8}}
-                                // valueExtractor={value => console.log(value)}
-                                containerStyle={{
-                                    justifyContent: 'center',
-                                    alignContent: 'center',
-                                    width: '100%',
-                                    backgroundColor: 'black'
-                                }}
-                                pickerStyle={{
-                                    backgroundColor: 'black',
-                                    width: '100%'
-                                }}
-                                dropdownPosition={0}
-                                value={this.state.category}
-                                data={category}
-                            />
-                        </View>
-
+                <View style={{flex: 1}}>
+                    <View>
+                        <Text
+                            style={{
+                                height: 30,
+                                fontSize: 20,
+                                textAlign: 'center',
+                                color: 'white'
+                            }}>
+                            Category
+                        </Text>
+                        <Dropdown
+                            onChangeText={this.handleChange}
+                            baseColor={'transparent'}
+                            textColor={'white'}
+                            itemColor={'white'}
+                            animationDuration={420}
+                            itemTextStyle={{
+                                textAlign: 'center'
+                            }}
+                            selectedItemColor={'blue'}
+                            itemCount={category.length}
+                            itemPadding={10}
+                            dropdownOffset={{top: 1, left: 10}}
+                            dropdownMargins={{min: 8, max: 8}}
+                            // valueExtractor={value => console.log(value)}
+                            containerStyle={{
+                                justifyContent: 'center',
+                                alignContent: 'center',
+                                width: '100%',
+                                backgroundColor: 'black'
+                            }}
+                            pickerStyle={{
+                                backgroundColor: 'black',
+                                width: '100%'
+                            }}
+                            dropdownPosition={0}
+                            value={this.state.category}
+                            data={category}
+                        />
+                    </View>
+                    {this.state.isLoading ? (
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    ) : (
                         <FlatList
                             ItemSeparatorComponent={seperator}
                             data={this.state.newsArray}
+                            onEndReached={this.handleMore}
+                            onEndReachedThreshold={0.5}
                             renderItem={({item}) => (
-                                <View style={styles.card}>
+                                <View
+                                    key={item.description}
+                                    style={styles.card}>
                                     <Image
                                         style={{
                                             flex: 1.5,
@@ -210,8 +213,8 @@ export default class News extends Component {
                                 </View>
                             )}
                         />
-                    </View>
-                )}
+                    )}
+                </View>
             </View>
         )
     }
