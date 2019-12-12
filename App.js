@@ -96,7 +96,7 @@ export default class News extends Component {
 
     handleMore = () => {
         let {page, total} = this.state
-        page += 1
+        page = page + 1
         if (page <= total / 10) {
             console.log(page)
             this.setState({page}, this.fetchNews)
